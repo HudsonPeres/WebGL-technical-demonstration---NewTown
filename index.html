@@ -1,0 +1,1850 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bem-vindo a NewTown</title>
+    <style>
+      :root {
+        --fg: #c9fff9;
+        --accent: #00ffd5;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: #000;
+        font-family:
+          system-ui,
+          Segoe UI,
+          Roboto,
+          Ubuntu,
+          sans-serif;
+        color: var(--fg);
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+
+      /* --- HUD (botões superiores esquerdos) --- */
+      .hud {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 20;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .hud button {
+        background: rgba(0, 255, 213, 0.12);
+        border: 1px solid rgba(0, 255, 213, 0.5);
+        color: var(--fg);
+        padding: 8px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .hud button:hover {
+        background: rgba(0, 255, 213, 0.25);
+      }
+
+      /* --- Botão do menu (toggle) - agora no canto superior direito --- */
+      #menu-toggle {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 25;
+        background: rgba(0, 255, 213, 0.12);
+        border: 1px solid rgba(0, 255, 213, 0.5);
+        color: var(--fg);
+        padding: 8px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 1;
+      }
+      #menu-toggle:hover {
+        background: rgba(0, 255, 213, 0.25);
+      }
+
+      /* --- Container lateral (menu + painel) --- */
+      .side-container {
+        position: fixed;
+        top: 60px; /* abaixo do botão */
+        right: 12px;
+        z-index: 15;
+        width: 320px;
+        max-width: calc(100vw - 24px);
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        background: rgba(0, 20, 30, 0.7);
+        border: 1px solid rgba(0, 255, 213, 0.3);
+        border-radius: 14px;
+        backdrop-filter: blur(4px);
+        padding: 10px 12px;
+        transition:
+          transform 0.3s ease,
+          opacity 0.3s ease;
+      }
+      .side-container.hidden {
+        transform: translateX(calc(100% + 20px));
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* --- Menu --- */
+      .menu {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .menu h3 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        color: var(--accent);
+        text-align: center;
+        letter-spacing: 2px;
+        border-bottom: 1px solid rgba(0, 255, 213, 0.2);
+        padding-bottom: 8px;
+      }
+      .menu-item {
+        display: block;
+        padding: 10px 14px;
+        background: rgba(0, 255, 213, 0.06);
+        border: 1px solid rgba(0, 255, 213, 0.15);
+        border-radius: 10px;
+        color: var(--fg);
+        text-decoration: none;
+        font-size: 15px;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+      .menu-item:hover {
+        background: rgba(0, 255, 213, 0.15);
+        border-color: var(--accent);
+      }
+      .menu-item.active {
+        background: rgba(0, 255, 213, 0.2);
+        border-color: var(--accent);
+      }
+
+      /* --- Painel de configurações (original) --- */
+      .panel {
+        display: none; /* controlado por JS */
+        flex-direction: column;
+        gap: 4px;
+      }
+      .panel h3 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        text-align: center;
+        color: var(--accent);
+        border-bottom: 1px solid rgba(0, 255, 213, 0.2);
+        padding-bottom: 6px;
+      }
+      .panel .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0;
+        font-size: 13px;
+      }
+      .panel .row label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .panel input[type="range"] {
+        width: 120px;
+        background: transparent;
+        accent-color: var(--accent);
+      }
+      .panel select {
+        background: rgba(0, 20, 30, 0.7);
+        color: var(--fg);
+        border: 1px solid rgba(0, 255, 213, 0.35);
+        border-radius: 8px;
+        padding: 2px 6px;
+        font-size: 13px;
+      }
+      .panel .toggle {
+        margin-left: 4px;
+      }
+      .panel .btn-back {
+        margin-top: 8px;
+        padding: 6px 12px;
+        background: rgba(0, 255, 213, 0.12);
+        border: 1px solid rgba(0, 255, 213, 0.3);
+        border-radius: 10px;
+        color: var(--fg);
+        cursor: pointer;
+        font-size: 13px;
+        text-align: center;
+        transition: background 0.2s;
+      }
+      .panel .btn-back:hover {
+        background: rgba(0, 255, 213, 0.25);
+      }
+
+      /* --- Outros elementos (help, badge) --- */
+      .help {
+        left: 12px;
+        bottom: 12px;
+        background: rgba(0, 20, 30, 0.7);
+        border: 1px solid rgba(0, 255, 213, 0.25);
+        padding: 10px 12px;
+        border-radius: 14px;
+        max-width: min(760px, 90vw);
+        font-size: 12px;
+        position: fixed;
+        z-index: 10;
+      }
+      .badge {
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        letter-spacing: 0.25em;
+        opacity: 0.8;
+        font-weight: 700;
+        position: fixed;
+        z-index: 10;
+        font-size: 12px;
+        text-align: center;
+      }
+      .toggle {
+        margin-left: 8px;
+      }
+
+      /* --- Ajustes responsivos --- */
+      @media (max-width: 700px) {
+        .side-container {
+          width: 280px;
+        }
+        .panel .row {
+          flex-wrap: wrap;
+        }
+        .panel input[type="range"] {
+          width: 100px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+
+    <!-- HUD (esquerda) -->
+    <div class="hud">
+      <button id="btn-orbit">Orbit</button>
+      <button id="btn-fps">FPS</button>
+      <button id="btn-screenshot">Shot</button>
+    </div>
+
+    <!-- Botão do menu (direita) -->
+    <button id="menu-toggle" title="Abrir/Fechar menu">☰</button>
+
+    <!-- Container lateral (menu + painel) -->
+    <div id="side-container" class="side-container hidden">
+      <!-- MENU -->
+      <div id="menu" class="menu">
+        <h3>✦ MENU ✦</h3>
+        <a class="menu-item" data-target="mundo">🌍 O mundo</a>
+        <a class="menu-item" data-target="regras">📜 Regras</a>
+        <a class="menu-item" data-target="personagens">👤 Personagens</a>
+        <a class="menu-item" data-target="fichas">📋 Fichas</a>
+        <a class="menu-item active" id="btn-edit-env" data-target="edit"
+          >⚙️ Editar ambiente</a
+        >
+      </div>
+
+      <!-- PAINEL DE CONFIGURAÇÕES (original) -->
+      <div id="panel" class="panel">
+        <h3>NVIDIA Neon City — Controls</h3>
+        <div class="row">
+          <span>Neon</span
+          ><input
+            id="neon"
+            type="range"
+            min="0"
+            max="4"
+            step="0.01"
+            value="2"
+          />
+        </div>
+        <div class="row">
+          <span>Particles</span
+          ><input
+            id="particles"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="1"
+          />
+        </div>
+        <div class="row">
+          <span>Fog</span
+          ><input
+            id="fog"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.35"
+          />
+        </div>
+        <div class="row">
+          <span>Day/Night</span
+          ><input
+            id="day"
+            type="range"
+            min="0"
+            max="1"
+            step="0.001"
+            value="0.2"
+          />
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="autoDay" class="toggle" /> Auto
+            Cycle</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleWire" checked class="toggle" />
+            Wireframe</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleMeshes" checked class="toggle" />
+            Solid Meshes</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleHolo" checked class="toggle" />
+            Holograms</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleTraffic" checked class="toggle" />
+            Traffic</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleAgents" checked class="toggle" />
+            Agents</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleLamps" checked class="toggle" />
+            Street Lamps</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleRoads" checked class="toggle" />
+            Roads & Paths</label
+          >
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="toggleAssets" checked class="toggle" />
+            Street Assets</label
+          >
+        </div>
+        <div class="row">
+          <span>Theme</span>
+          <select id="theme">
+            <option value="nvidia" selected>NVIDIA Green</option>
+            <option value="magenta">Magenta Pulse</option>
+            <option value="ocean">Ocean Cyan</option>
+            <option value="sunset">Sunset Neon</option>
+            <option value="rainbow">Rainbow Market</option>
+          </select>
+        </div>
+        <div class="row">
+          <span>Vibrance</span
+          ><input
+            id="vibrance"
+            type="range"
+            min="0"
+            max="2"
+            step="0.01"
+            value="1.2"
+          />
+        </div>
+        <div class="row">
+          <label
+            ><input type="checkbox" id="togglePathRainbow" class="toggle" />
+            Path Rainbow</label
+          >
+        </div>
+        <button id="btn-back" class="btn-back">← Voltar ao menu</button>
+      </div>
+    </div>
+
+    <!-- Badge e Help -->
+    <div class="badge">Bem-vindo a NewTown</div>
+    <div class="help">
+      Banners com imagens (Calcinha Neon) surgem nas fachadas dos prédios!
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  JAVASCRIPT                                                  -->
+    <!-- ============================================================ -->
+    <script>
+      // ---------- MATH HELPERS ----------
+      const Mat4 = {
+        ident() {
+          return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        },
+        mul(a, b) {
+          const r = new Array(16);
+          for (let i = 0; i < 4; i++)
+            for (let j = 0; j < 4; j++) {
+              r[i * 4 + j] =
+                a[i * 4 + 0] * b[0 * 4 + j] +
+                a[i * 4 + 1] * b[1 * 4 + j] +
+                a[i * 4 + 2] * b[2 * 4 + j] +
+                a[i * 4 + 3] * b[3 * 4 + j];
+            }
+          return r;
+        },
+        perspective(fovy, aspect, near, far) {
+          const f = 1 / Math.tan(fovy / 2),
+            nf = 1 / (near - far);
+          return [
+            f / aspect,
+            0,
+            0,
+            0,
+            0,
+            f,
+            0,
+            0,
+            0,
+            0,
+            (far + near) * nf,
+            -1,
+            0,
+            0,
+            2 * far * near * nf,
+            0,
+          ];
+        },
+        lookAt(e, c, u) {
+          let [ex, ey, ez] = e,
+            [cx, cy, cz] = c,
+            [ux, uy, uz] = u;
+          let zx = ex - cx,
+            zy = ey - cy,
+            zz = ez - cz;
+          let zl = Math.hypot(zx, zy, zz);
+          zx /= zl;
+          zy /= zl;
+          zz /= zl;
+          let xx = uy * zz - uz * zy,
+            xy = uz * zx - ux * zz,
+            xz = ux * zy - uy * zx;
+          let xl = Math.hypot(xx, xy, xz);
+          xx /= xl;
+          xy /= xl;
+          xz /= xl;
+          const yx = zy * xz - zz * xy,
+            yy = zz * xx - zx * xz,
+            yz = zx * xy - zy * xx;
+          return [
+            xx,
+            yx,
+            zx,
+            0,
+            xy,
+            yy,
+            zy,
+            0,
+            xz,
+            yz,
+            zz,
+            0,
+            -(xx * ex + xy * ey + xz * ez),
+            -(yx * ex + yy * ey + yz * ez),
+            -(zx * ex + zy * ey + zz * ez),
+            1,
+          ];
+        },
+        translate(m, [x, y, z]) {
+          const t = Mat4.ident();
+          t[12] = x;
+          t[13] = y;
+          t[14] = z;
+          return Mat4.mul(m, t);
+        },
+        rotateY(m, a) {
+          const c = Math.cos(a),
+            s = Math.sin(a);
+          const r = [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1];
+          return Mat4.mul(m, r);
+        },
+        scale(m, [x, y, z]) {
+          const r = [x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1];
+          return Mat4.mul(m, r);
+        },
+      };
+
+      // ---------- GL SETUP ----------
+      const canvas = document.getElementById("gl");
+      const gl =
+        canvas.getContext("webgl", { antialias: true, alpha: false }) ||
+        canvas.getContext("experimental-webgl");
+      function resize() {
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+      addEventListener("resize", resize);
+      resize();
+      if (!gl) {
+        alert("WebGL not supported.");
+      }
+
+      // ---------- SHADERS ----------
+      const vsWire = `attribute vec3 position;attribute vec3 color;uniform mat4 uProj,uView,uModel;varying vec3 vColor;void main(){vColor=color;gl_Position=uProj*uView*uModel*vec4(position,1.0);gl_PointSize=2.5;}`;
+      const fsWire = `precision mediump float;varying vec3 vColor;uniform float uFog;void main(){vec3 col=pow(vColor,vec3(0.7));float z=gl_FragCoord.z/gl_FragCoord.w;float f=clamp(uFog*(z*0.004),0.0,1.0);gl_FragColor=vec4(mix(col,vec3(0.0),f),1.0);}`;
+      const vsMesh = `attribute vec3 position;attribute vec3 normal;uniform mat4 uProj,uView,uModel;varying vec3 vN;varying vec3 vW;void main(){vec4 wp=uModel*vec4(position,1.0);vW=wp.xyz;vN=mat3(uModel)*normal;gl_Position=uProj*uView*wp;}`;
+      const fsMesh = `precision mediump float;varying vec3 vN;varying vec3 vW;uniform vec3 uColor;uniform float uTime,uFog;uniform vec3 uSun;uniform float uDay,uLightning;uniform vec3 uAccent,uPaint;uniform float uVibrance;uniform bool uPathRainbow;float lambert(vec3 n,vec3 l){return max(dot(normalize(n),normalize(l)),0.0);}float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));vec2 u=f*f*(3.0-2.0*f);return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;}vec3 sat(vec3 c,float s){float l=dot(c,vec3(0.2126,0.7152,0.0722));return mix(vec3(l),c,s);}vec3 groundTex(vec3 p){float f=0.5+0.5*sin(uTime*2.0+p.x*0.6+p.z*0.7);float lines=step(0.985,abs(sin(p.x*0.4))*abs(sin(p.z*0.4)));return mix(vec3(0.02,0.07,0.12),uAccent*f,lines);}vec3 buildingTex(vec3 p){float floors=step(0.9,fract(p.y*0.15));float windows=step(0.7,fract(p.x*0.12))*step(0.7,fract(p.z*0.12));float glow=floors*windows;return mix(vec3(0.02,0.12,0.18),mix(vec3(0.0,1.0,0.95),uAccent,0.4)*1.2,glow);}vec3 asphaltTex(vec3 p){float n=noise(p.xz*2.5);vec3 asphalt=vec3(0.06,0.06,0.07)+n*0.05;float dash=step(0.7,fract((p.z*0.1)))*step(0.0,1.0-fract((p.z*0.1)));float lane=smoothstep(0.08,0.0,abs(abs(p.x)-0.0)-0.1);float side=smoothstep(0.05,0.0,abs(abs(p.x)-3.0)-0.03);vec3 paint=uPaint*(lane*dash*1.2+side*0.8);float cw=step(-3.0,p.z)*step(p.z,3.0)*step(-1.6,p.x)*step(p.x,1.6)*step(0.15,fract((p.x+2.0)*3.0));paint+=vec3(1.0)*cw*0.6;return asphalt+paint;}vec3 sidewalkTex(vec3 p){float g1=step(0.95,fract(p.x*0.5))+step(0.95,fract(p.z*0.5));vec3 tiles=mix(vec3(0.14,0.16,0.2),vec3(0.22,0.25,0.3),noise(p.xz*3.0));return mix(tiles,uAccent,g1*0.15);}vec3 hue(float t){vec3 k=vec3(1.0,2.0/3.0,1.0/3.0);return clamp(abs(mod(t+k,1.0)*6.0-3.0)-1.0,0.0,1.0);}vec3 pathTex(vec3 p){float pulse=0.6+0.4*sin(uTime*4.0+p.z*0.8+p.x*0.6);vec3 base=mix(uAccent,vec3(1.0,0.6,1.0),pulse);if(uPathRainbow){vec3 h=hue(fract(0.2*p.z+0.1*p.x+uTime*0.08));base=mix(base,h,0.75);}return base;}void main(){vec3 sunDir=normalize(uSun);vec3 ambient=mix(vec3(0.02,0.05,0.12),vec3(0.25,0.35,0.45),uDay);vec3 base=uColor;vec3 albedo;if(base.x<0.01&&base.y>0.9){albedo=groundTex(vW);}else if(base.z>0.9&&base.x>0.9){float s=0.6+0.4*sin(vW.y*10.0+uTime*6.0);albedo=mix(vec3(0.0),vec3(1.0,0.7,1.0),s);}else if(base.z>0.6&&base.y>0.6&&base.x<0.2){albedo=buildingTex(vW);}else if(base.x>0.85&&base.y<0.3){albedo=pathTex(vW);}else if(base.x>0.4&&base.y>0.4){albedo=sidewalkTex(vW);}else if(base.x>0.2&&base.y<0.35&&base.z<0.35){albedo=asphaltTex(vW);}else{albedo=base;}albedo=sat(albedo,uVibrance);float diff=lambert(vN,sunDir);vec3 sunColor=mix(vec3(0.1,0.2,0.3),vec3(1.0,0.95,0.8),uDay);vec3 lit=albedo*(ambient+sunColor*diff*(0.6+0.4*uDay));lit*=1.0+uLightning*1.2;float z=gl_FragCoord.z/gl_FragCoord.w;float fog=clamp(uFog*(z*0.0035),0.0,1.0);gl_FragColor=vec4(mix(lit,vec3(0.0),fog),1.0);}`;
+      const vsTex = `attribute vec3 position;attribute vec2 uv;uniform mat4 uProj,uView,uModel;varying vec2 vUv;void main(){vUv=uv;gl_Position=uProj*uView*uModel*vec4(position,1.0);}`;
+      const fsTex = `precision mediump float;varying vec2 vUv;uniform sampler2D uTexture;uniform float uFog;uniform vec3 uFogColor;void main(){vec4 color=texture2D(uTexture,vUv);float z=gl_FragCoord.z/gl_FragCoord.w;float fog=clamp(uFog*(z*0.0035),0.0,1.0);gl_FragColor=vec4(mix(color.rgb,uFogColor,fog),color.a);}`;
+
+      function compile(src, type) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+          throw new Error(gl.getShaderInfoLog(s));
+        }
+        return s;
+      }
+      function program(vs, fs) {
+        const p = gl.createProgram();
+        gl.attachShader(p, compile(vs, gl.VERTEX_SHADER));
+        gl.attachShader(p, compile(fs, gl.FRAGMENT_SHADER));
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+          throw new Error(gl.getProgramInfoLog(p));
+        }
+        return p;
+      }
+      const progWire = program(vsWire, fsWire);
+      const locW = {
+        pos: gl.getAttribLocation(progWire, "position"),
+        col: gl.getAttribLocation(progWire, "color"),
+        uProj: gl.getUniformLocation(progWire, "uProj"),
+        uView: gl.getUniformLocation(progWire, "uView"),
+        uModel: gl.getUniformLocation(progWire, "uModel"),
+        uFog: gl.getUniformLocation(progWire, "uFog"),
+      };
+      const progMesh = program(vsMesh, fsMesh);
+      const locM = {
+        pos: gl.getAttribLocation(progMesh, "position"),
+        nor: gl.getAttribLocation(progMesh, "normal"),
+        uProj: gl.getUniformLocation(progMesh, "uProj"),
+        uView: gl.getUniformLocation(progMesh, "uView"),
+        uModel: gl.getUniformLocation(progMesh, "uModel"),
+        uColor: gl.getUniformLocation(progMesh, "uColor"),
+        uTime: gl.getUniformLocation(progMesh, "uTime"),
+        uFog: gl.getUniformLocation(progMesh, "uFog"),
+        uSun: gl.getUniformLocation(progMesh, "uSun"),
+        uDay: gl.getUniformLocation(progMesh, "uDay"),
+        uLightning: gl.getUniformLocation(progMesh, "uLightning"),
+        uAccent: gl.getUniformLocation(progMesh, "uAccent"),
+        uPaint: gl.getUniformLocation(progMesh, "uPaint"),
+        uVibrance: gl.getUniformLocation(progMesh, "uVibrance"),
+        uPathRainbow: gl.getUniformLocation(progMesh, "uPathRainbow"),
+      };
+      const progTex = program(vsTex, fsTex);
+      const locTex = {
+        pos: gl.getAttribLocation(progTex, "position"),
+        uv: gl.getAttribLocation(progTex, "uv"),
+        uProj: gl.getUniformLocation(progTex, "uProj"),
+        uView: gl.getUniformLocation(progTex, "uView"),
+        uModel: gl.getUniformLocation(progTex, "uModel"),
+        uTexture: gl.getUniformLocation(progTex, "uTexture"),
+        uFog: gl.getUniformLocation(progTex, "uFog"),
+        uFogColor: gl.getUniformLocation(progTex, "uFogColor"),
+      };
+
+      // ---------- BUFFERS & HELPERS ----------
+      function makeBuffer(data, itemSize, usage = gl.STATIC_DRAW) {
+        const b = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, b);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), usage);
+        b.itemSize = itemSize;
+        b.numItems = data.length / itemSize;
+        return b;
+      }
+      function drawBuffer(prog, locPos, locColOrNor, bufPos, bufOther, mode) {
+        gl.useProgram(prog);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufPos);
+        gl.vertexAttribPointer(locPos, bufPos.itemSize, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(locPos);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufOther);
+        gl.vertexAttribPointer(
+          locColOrNor,
+          bufOther.itemSize,
+          gl.FLOAT,
+          false,
+          0,
+          0,
+        );
+        gl.enableVertexAttribArray(locColOrNor);
+        gl.drawArrays(mode, 0, bufPos.numItems);
+      }
+      function drawMeshUnit(bufPos, bufNor, model, color) {
+        gl.useProgram(progMesh);
+        gl.uniformMatrix4fv(locM.uModel, false, new Float32Array(model));
+        gl.uniform3f(locM.uColor, color[0], color[1], color[2]);
+        drawBuffer(progMesh, locM.pos, locM.nor, bufPos, bufNor, gl.TRIANGLES);
+      }
+
+      // Grid (linhas)
+      const gridPos = [],
+        gridCol = [];
+      const G = 120,
+        step = 2.5;
+      for (let i = -G; i <= G; i++) {
+        gridPos.push(-G, 0, i * step, G, 0, i * step);
+        gridPos.push(i * step, 0, -G, i * step, 0, G);
+        for (let k = 0; k < 2; k++) {
+          gridCol.push(0, 1, 0.85, 0, 1, 0.85);
+          gridCol.push(0, 0.6, 1, 0, 0.6, 1);
+        }
+      }
+      const gridPosBuf = makeBuffer(gridPos, 3),
+        gridColBuf = makeBuffer(gridCol, 3);
+
+      // Plane
+      function makePlane(size) {
+        const s = size;
+        const pos = [
+          -s,
+          0,
+          -s,
+          s,
+          0,
+          -s,
+          s,
+          0,
+          s,
+          -s,
+          0,
+          -s,
+          s,
+          0,
+          s,
+          -s,
+          0,
+          s,
+        ];
+        const nor = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+        return { pos: makeBuffer(pos, 3), nor: makeBuffer(nor, 3) };
+      }
+      const plane = makePlane(200);
+
+      // ---------- PRÉDIOS + BANNERS COM IMAGENS ----------
+      // Lista de banners (apenas um arquivo de imagem, mas vários nomes)
+      const bannerDefs = [
+        { name: "Calcinha Neon", fallback: "BANDA CALCINHA NEON" },
+        { name: "Metropol", fallback: "METROPOL" },
+        { name: "SAMCTUS", fallback: "SAMCTUS" },
+        { name: "Club Noob", fallback: "CLUB NOOB" },
+      ];
+
+      // Função para criar textura com texto (fallback)
+      function createFallbackTexture(text, color = "#00ffd5", glow = "cyan") {
+        const c = document.createElement("canvas");
+        c.width = 256;
+        c.height = 128;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "rgba(0,20,30,0.85)";
+        ctx.fillRect(0, 0, 256, 128);
+        ctx.strokeStyle = "rgba(0,255,213,0.08)";
+        ctx.lineWidth = 1;
+        for (let y = 0; y < 128; y += 4) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(256, y);
+          ctx.stroke();
+        }
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const fontSize = 36;
+        ctx.font = `bold ${fontSize}px 'Segoe UI','Arial Black',system-ui,sans-serif`;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 40;
+        ctx.fillStyle = color;
+        ctx.fillText(text, 128, 64 - 2);
+        ctx.shadowBlur = 80;
+        ctx.shadowColor = "white";
+        ctx.fillStyle = color;
+        ctx.fillText(text, 128, 64 - 2);
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(4, 4, 248, 120);
+        return c;
+      }
+
+      // Carregar a imagem
+      function loadImage(url) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error("Falha ao carregar: " + url));
+          img.src = url;
+        });
+      }
+
+      // Função para criar textura a partir de uma imagem ou fallback
+      function createTextureFromImage(img, fallbackText) {
+        if (img) {
+          const tex = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            img,
+          );
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          return tex;
+        } else {
+          // fallback com texto
+          const canvas = createFallbackTexture(
+            fallbackText,
+            "#ff00ff",
+            "fuchsia",
+          );
+          const tex = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            canvas,
+          );
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          return tex;
+        }
+      }
+
+      // ---------- UI & STATE (inicializado depois do carregamento) ----------
+      let mode = "orbit";
+      const cam = {
+        theta: 0.6,
+        phi: 0.3,
+        r: 40,
+        target: [0, 3, 0],
+        eye: [0, 0, 0],
+      };
+      const keys = {};
+      const el = (id) => document.getElementById(id);
+      const themeEl = el("theme");
+      const THEMES = {
+        nvidia: { accent: [0.0, 1.0, 0.6], paint: [1.0, 1.0, 0.9] },
+        magenta: { accent: [1.0, 0.3, 0.9], paint: [1.0, 0.8, 1.0] },
+        ocean: { accent: [0.0, 0.8, 1.0], paint: [0.8, 1.0, 1.0] },
+        sunset: { accent: [1.0, 0.55, 0.2], paint: [1.0, 0.9, 0.7] },
+        rainbow: { accent: [0.6, 0.9, 1.0], paint: [1.0, 1.0, 1.0] },
+      };
+      let ACCENT = [0, 1, 0.6],
+        PAINT = [1, 1, 0.9];
+      themeEl.onchange = () => {
+        const t = THEMES[themeEl.value];
+        ACCENT = t.accent;
+        PAINT = t.paint;
+      };
+      themeEl.dispatchEvent(new Event("change"));
+
+      el("btn-orbit").onclick = () => {
+        mode = "orbit";
+      };
+      el("btn-fps").onclick = () => {
+        mode = "fps";
+      };
+      el("btn-screenshot").onclick = () => {
+        const a = document.createElement("a");
+        a.download = "nvidia-neon-city.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      };
+
+      let showWire = true,
+        showMeshes = true,
+        showHolo = true,
+        showTraffic = true,
+        showAgents = true,
+        showLamps = true,
+        showRoads = true,
+        showAssets = true;
+      let autoDay = false,
+        day = 0.2,
+        lightning = 0.0,
+        pathRainbow = false;
+      el("toggleWire").onchange = (e) => (showWire = e.target.checked);
+      el("toggleMeshes").onchange = (e) => (showMeshes = e.target.checked);
+      el("toggleHolo").onchange = (e) => (showHolo = e.target.checked);
+      el("toggleTraffic").onchange = (e) => (showTraffic = e.target.checked);
+      el("toggleAgents").onchange = (e) => (showAgents = e.target.checked);
+      el("toggleLamps").onchange = (e) => (showLamps = e.target.checked);
+      el("autoDay").onchange = (e) => (autoDay = e.target.checked);
+      el("toggleRoads").onchange = (e) => (showRoads = e.target.checked);
+      el("toggleAssets").onchange = (e) => (showAssets = e.target.checked);
+      el("togglePathRainbow").onchange = (e) =>
+        (pathRainbow = e.target.checked);
+
+      document.addEventListener("keydown", (e) => (keys[e.code] = true));
+      document.addEventListener("keyup", (e) => (keys[e.code] = false));
+
+      let dragging = false,
+        lx = 0,
+        ly = 0;
+      canvas.addEventListener("mousedown", (e) => {
+        dragging = true;
+        lx = e.clientX;
+        ly = e.clientY;
+      });
+      addEventListener("mouseup", () => (dragging = false));
+      addEventListener("mousemove", (e) => {
+        if (dragging && mode === "orbit") {
+          cam.theta -= (e.clientX - lx) * 0.005;
+          cam.phi -= (e.clientY - ly) * 0.005;
+          cam.phi = Math.max(0.05, Math.min(Math.PI - 0.05, cam.phi));
+          lx = e.clientX;
+          ly = e.clientY;
+        }
+      });
+      addEventListener("wheel", (e) => {
+        cam.r *= 1 + e.deltaY * 0.001;
+        cam.r = Math.max(6, Math.min(120, cam.r));
+      });
+
+      function updateCamera(dt) {
+        if (mode === "fps") {
+          const speed = (keys["ShiftLeft"] ? 30 : 12) * dt;
+          const forward = [
+            Math.sin(cam.theta) * Math.sin(cam.phi),
+            0,
+            Math.cos(cam.theta) * Math.sin(cam.phi),
+          ];
+          const right = [Math.cos(cam.theta), 0, -Math.sin(cam.theta)];
+          if (keys["KeyW"]) {
+            cam.target[0] += forward[0] * speed;
+            cam.target[2] += forward[2] * speed;
+          }
+          if (keys["KeyS"]) {
+            cam.target[0] -= forward[0] * speed;
+            cam.target[2] -= forward[2] * speed;
+          }
+          if (keys["KeyA"]) {
+            cam.target[0] -= right[0] * speed;
+            cam.target[2] -= right[2] * speed;
+          }
+          if (keys["KeyD"]) {
+            cam.target[0] += right[0] * speed;
+            cam.target[2] += right[2] * speed;
+          }
+          if (keys["Space"]) cam.target[1] += speed * 0.8;
+          if (keys["ControlLeft"]) cam.target[1] -= speed * 0.8;
+        }
+        const ex =
+          cam.target[0] + cam.r * Math.sin(cam.theta) * Math.sin(cam.phi);
+        const ey = cam.target[1] + cam.r * Math.cos(cam.phi);
+        const ez =
+          cam.target[2] + cam.r * Math.cos(cam.theta) * Math.sin(cam.phi);
+        cam.eye = [ex, ey, ez];
+      }
+
+      // ---------- MENU / PAINEL TOGGLE ----------
+      const sideContainer = document.getElementById("side-container");
+      const menuDiv = document.getElementById("menu");
+      const panelDiv = document.getElementById("panel");
+      const toggleBtn = document.getElementById("menu-toggle");
+      const editEnvBtn = document.getElementById("btn-edit-env");
+      const backBtn = document.getElementById("btn-back");
+
+      let menuOpen = false;
+
+      function showMenu() {
+        menuDiv.style.display = "flex";
+        panelDiv.style.display = "none";
+        sideContainer.classList.remove("hidden");
+        menuOpen = true;
+      }
+
+      function showPanel() {
+        menuDiv.style.display = "none";
+        panelDiv.style.display = "flex";
+        sideContainer.classList.remove("hidden");
+        menuOpen = true;
+      }
+
+      function hideSide() {
+        sideContainer.classList.add("hidden");
+        menuOpen = false;
+      }
+
+      toggleBtn.addEventListener("click", function () {
+        if (menuOpen) {
+          hideSide();
+        } else {
+          showMenu();
+        }
+      });
+
+      editEnvBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        showPanel();
+      });
+
+      backBtn.addEventListener("click", function () {
+        showMenu();
+      });
+
+      document
+        .querySelectorAll(".menu-item:not(#btn-edit-env)")
+        .forEach((item) => {
+          item.addEventListener("click", function (e) {
+            e.preventDefault();
+            const target = this.dataset.target;
+            alert(`Navegando para: ${target} (mockup)`);
+          });
+        });
+
+      hideSide(); // começa fechado
+
+      // ---------- OUTDOOR "BEM VINDO" (central) ----------
+      function createWelcomeTexture(text, width = 512, height = 128) {
+        const c = document.createElement("canvas");
+        c.width = width;
+        c.height = height;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "rgba(0,20,30,0.85)";
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = "rgba(255,0,255,0.08)";
+        ctx.lineWidth = 1;
+        for (let y = 0; y < height; y += 4) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const fontSize = Math.min(width, height) * 0.28;
+        ctx.font = `bold ${fontSize}px 'Segoe UI','Arial Black',system-ui,sans-serif`;
+        ctx.shadowColor = "fuchsia";
+        ctx.shadowBlur = 40;
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillText(text, width / 2, height / 2 - 2);
+        ctx.shadowBlur = 80;
+        ctx.shadowColor = "white";
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillText(text, width / 2, height / 2 - 2);
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#ff00ff";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(6, 6, width - 12, height - 12);
+        return c;
+      }
+
+      const welcomeCanvas = createWelcomeTexture("Bem Vindo a NewTown!");
+      const welcomeTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, welcomeTex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        welcomeCanvas,
+      );
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      const wWelcome = 12.0,
+        hWelcome = 3.0; // aumentei um pouco
+      const hwW = wWelcome / 2,
+        hhW = hWelcome / 2;
+      const welcomePos = [0, 12, 0];
+      const welcomeRotY = 0;
+      const welcomeQuadPos = [
+        -hwW,
+        -hhW,
+        0,
+        hwW,
+        -hhW,
+        0,
+        hwW,
+        hhW,
+        0,
+        -hwW,
+        -hhW,
+        0,
+        hwW,
+        hhW,
+        0,
+        -hwW,
+        hhW,
+        0,
+      ];
+      const welcomeQuadUv = [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1];
+      const welcomePosBuf = makeBuffer(welcomeQuadPos, 3);
+      const welcomeUvBuf = makeBuffer(welcomeQuadUv, 2);
+
+      function updateWelcomeTexture(time) {
+        const canvas = welcomeCanvas;
+        const ctx = canvas.getContext("2d");
+        const width = canvas.width,
+          height = canvas.height;
+        ctx.fillStyle = "rgba(0,20,30,0.85)";
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = "rgba(255,0,255,0.08)";
+        ctx.lineWidth = 1;
+        for (let y = 0; y < height; y += 4) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+        const text = "Bem Vindo a NewTown!";
+        const fontSize = Math.min(width, height) * 0.28;
+        ctx.font = `bold ${fontSize}px 'Segoe UI','Arial Black',system-ui,sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const metrics = ctx.measureText(text);
+        const textWidth = metrics.width;
+        const extra = width + 50;
+        const totalWidth = textWidth + extra;
+        const speed = 60;
+        const offset = (time * speed) % totalWidth;
+        const xPos = width / 2 - offset;
+        ctx.shadowColor = "fuchsia";
+        ctx.shadowBlur = 40;
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillText(text, xPos, height / 2 - 2);
+        ctx.fillText(text, xPos + totalWidth, height / 2 - 2);
+        ctx.shadowBlur = 80;
+        ctx.shadowColor = "white";
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillText(text, xPos, height / 2 - 2);
+        ctx.fillText(text, xPos + totalWidth, height / 2 - 2);
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#ff00ff";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(6, 6, width - 12, height - 12);
+        gl.bindTexture(gl.TEXTURE_2D, welcomeTex);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          canvas,
+        );
+      }
+
+      // ---------- INICIALIZAÇÃO ASSÍNCRONA ----------
+      async function init() {
+        // Carregar a imagem do banner (assets/calcinhaneon.png)
+        let bannerImg = null;
+        try {
+          bannerImg = await loadImage("assets/calcinhaneon.png");
+          console.log("Banner carregado com sucesso!");
+        } catch (e) {
+          console.warn(
+            "Falha ao carregar assets/calcinhaneon.png, usando fallback",
+          );
+        }
+
+        // Criar uma textura para cada definição de banner (reutilizando a mesma imagem)
+        const bannerTextures = {};
+        for (const def of bannerDefs) {
+          // se a imagem foi carregada, usamos ela, senão fallback
+          const tex = createTextureFromImage(bannerImg, def.fallback);
+          bannerTextures[def.name] = tex;
+        }
+
+        // ---------- GERAR PRÉDIOS E BANNERS ----------
+        const buildPos = [],
+          buildCol = [];
+        const meshVerts = [],
+          meshNorms = [];
+        const buildingOutdoors = [];
+
+        function addBoxWire(cx, cy, cz, sx, sy, sz) {
+          const x0 = cx - sx,
+            x1 = cx + sx,
+            y0 = cy - sy,
+            y1 = cy + sy,
+            z0 = cz - sz,
+            z1 = cz + sz;
+          const e = [
+            [x0, y0, z0, x1, y0, z0],
+            [x1, y0, z0, x1, y0, z1],
+            [x1, y0, z1, x0, y0, z1],
+            [x0, y0, z1, x0, y0, z0],
+            [x0, y1, z0, x1, y1, z0],
+            [x1, y1, z0, x1, y1, z1],
+            [x1, y1, z1, x0, y1, z1],
+            [x0, y1, z1, x0, y1, z0],
+            [x0, y0, z0, x0, y1, z0],
+            [x1, y0, z0, x1, y1, z0],
+            [x1, y0, z1, x1, y1, z1],
+            [x0, y0, z1, x0, y1, z1],
+          ];
+          for (const ed of e) {
+            buildPos.push(...ed);
+            buildCol.push(0, 1, 0.9, 0, 1, 0.9);
+          }
+        }
+
+        function pushCube(verts, norms, cx, cy, cz, sx, sy, sz) {
+          const faces = [
+            [
+              [1, 0, 0],
+              [sx, sy, sz],
+              [
+                [1, -1, -1],
+                [1, 1, -1],
+                [1, 1, 1],
+                [1, -1, -1],
+                [1, 1, 1],
+                [1, -1, 1],
+              ],
+            ],
+            [
+              [-1, 0, 0],
+              [sx, sy, sz],
+              [
+                [-1, -1, 1],
+                [-1, 1, 1],
+                [-1, 1, -1],
+                [-1, -1, 1],
+                [-1, 1, -1],
+                [-1, -1, -1],
+              ],
+            ],
+            [
+              [0, 1, 0],
+              [sx, sy, sz],
+              [
+                [-1, 1, 1],
+                [1, 1, 1],
+                [1, 1, -1],
+                [-1, 1, 1],
+                [1, 1, -1],
+                [-1, 1, -1],
+              ],
+            ],
+            [
+              [0, -1, 0],
+              [sx, sy, sz],
+              [
+                [-1, -1, -1],
+                [1, -1, -1],
+                [1, -1, 1],
+                [-1, -1, -1],
+                [1, -1, 1],
+                [-1, -1, 1],
+              ],
+            ],
+            [
+              [0, 0, 1],
+              [sx, sy, sz],
+              [
+                [-1, -1, 1],
+                [1, -1, 1],
+                [1, 1, 1],
+                [-1, -1, 1],
+                [1, 1, 1],
+                [-1, 1, 1],
+              ],
+            ],
+            [
+              [0, 0, -1],
+              [sx, sy, sz],
+              [
+                [1, -1, -1],
+                [-1, -1, -1],
+                [-1, 1, -1],
+                [1, -1, -1],
+                [-1, 1, -1],
+                [1, 1, -1],
+              ],
+            ],
+          ];
+          for (const f of faces) {
+            const n = f[0],
+              s = f[1],
+              tris = f[2];
+            for (const v of tris) {
+              verts.push(cx + v[0] * s[0], cy + v[1] * s[1], cz + v[2] * s[2]);
+              norms.push(...n);
+            }
+          }
+        }
+
+        for (let i = 0; i < 120; i++) {
+          const side = i % 2 ? 1 : -1,
+            h = 3 + Math.random() * 28;
+          const sx = 2 + Math.random() * 3;
+          const sy = h * 0.5;
+          const sz = 2 + Math.random() * 3;
+          const x = side * (15 + Math.random() * 120);
+          const z = -160 + Math.random() * 320;
+          addBoxWire(x, sy, z, sx, sy, sz);
+          pushCube(meshVerts, meshNorms, x, sy, z, sx, sy, sz);
+
+          // Adicionar banner em alguns prédios (~15% de chance)
+          if (Math.random() < 0.15) {
+            const bannerDef =
+              bannerDefs[Math.floor(Math.random() * bannerDefs.length)];
+            const tex = bannerTextures[bannerDef.name];
+
+            // Fachada voltada para a rua (eixo Z)
+            const rotY = x > 0 ? 0 : Math.PI;
+            const offsetZ = x > 0 ? -sz : sz;
+            const posX = x;
+            const posY = sy;
+            const posZ = z + offsetZ * 1.01;
+
+            const outW = Math.min(sx * 1.2, 4.0);
+            const outH = Math.min(sy * 0.5, 2.0);
+            const hw = outW / 2,
+              hh = outH / 2;
+            const qPos = [
+              -hw,
+              -hh,
+              0,
+              hw,
+              -hh,
+              0,
+              hw,
+              hh,
+              0,
+              -hw,
+              -hh,
+              0,
+              hw,
+              hh,
+              0,
+              -hw,
+              hh,
+              0,
+            ];
+            const qUv = [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1];
+            const qPosBuf = makeBuffer(qPos, 3);
+            const qUvBuf = makeBuffer(qUv, 2);
+
+            buildingOutdoors.push({
+              pos: [posX, posY, posZ],
+              rotY: rotY,
+              texture: tex,
+              posBuf: qPosBuf,
+              uvBuf: qUvBuf,
+            });
+          }
+        }
+
+        const buildPosBuf = makeBuffer(buildPos, 3),
+          buildColBuf = makeBuffer(buildCol, 3);
+        const buildMeshPosBuf = makeBuffer(meshVerts, 3),
+          buildMeshNorBuf = makeBuffer(meshNorms, 3);
+
+        // ---------- DEMAIS ELEMENTOS (stores, lamps, etc.) ----------
+        // Stores
+        const storeVerts = [],
+          storeNorms = [];
+        function addStore(x, z) {
+          const y = 1.2;
+          pushCube(storeVerts, storeNorms, x, y * 0.5, z, 2.2, y * 0.5, 1.6);
+          pushCube(storeVerts, storeNorms, x, y + 0.15, z, 2.4, 0.12, 1.8);
+        }
+        for (let i = -4; i <= 4; i++) {
+          addStore(-10.5, i * 18);
+          addStore(10.5, i * 18 + 9);
+        }
+        const storePosBuf = makeBuffer(storeVerts, 3),
+          storeNorBuf = makeBuffer(storeNorms, 3);
+
+        // Street lamps (wire only)
+        const lampPos = [];
+        function addLamp(x, z) {
+          addBoxWire(x, 3, z, 0.08, 3, 0.08);
+          addBoxWire(x, 5.6, z, 0.8, 0.02, 0.8);
+        }
+        for (let i = -6; i <= 6; i++) {
+          addLamp(-13.5, i * 16);
+          addLamp(13.5, i * 16 + 8);
+        }
+        const lampPosBuf = makeBuffer(lampPos, 3),
+          lampColBuf = makeBuffer([], 3);
+
+        // Floating platforms
+        const platPos = [],
+          platCol = [];
+        const platVerts = [],
+          platNorms = [];
+        for (let i = 0; i < 12; i++) {
+          const x = -12 + i * 6,
+            y = 2.5,
+            z = -20 + (i % 2) * 8,
+            sx = 2.2,
+            sy = 0.2,
+            sz = 2.2;
+          addBoxWire(x, y, z, sx, sy, sz);
+          pushCube(platVerts, platNorms, x, y, z, sx, sy, sz);
+        }
+        const platPosBuf = makeBuffer(platPos, 3),
+          platColBuf = makeBuffer(platCol, 3);
+        const platMeshPosBuf = makeBuffer(platVerts, 3),
+          platMeshNorBuf = makeBuffer(platNorms, 3);
+
+        // Particles
+        const PCOUNT = 6000;
+        const pPos = [],
+          pCol = [];
+        for (let i = 0; i < PCOUNT; i++) {
+          pPos.push(
+            (Math.random() - 0.5) * 300,
+            1 + Math.random() * 40,
+            (Math.random() - 0.5) * 300,
+          );
+          pCol.push(0.7, 1, 1);
+        }
+        const partPosBuf = makeBuffer(pPos, 3),
+          partColBuf = makeBuffer(pCol, 3);
+
+        // Hologram
+        const mPos = [],
+          mCol = [];
+        const R = 12,
+          N = 12;
+        for (let i = 0; i < N; i++) {
+          const a = (i / N) * Math.PI * 2;
+          const x = Math.cos(a) * R,
+            z = Math.sin(a) * R;
+          addBoxWire(x, 3.2, z, 1.6, 0.9, 0.1);
+        }
+        const mPosBuf = makeBuffer(mPos, 3),
+          mColBuf = makeBuffer(mCol, 3);
+        const holoPos = [
+          -3, 6, -8, 3, 6, -8, 3, 3.5, -8, -3, 6, -8, 3, 3.5, -8, -3, 3.5, -8,
+        ];
+        const holoNor = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
+        const holoPosBuf = makeBuffer(holoPos, 3),
+          holoNorBuf = makeBuffer(holoNor, 3);
+
+        // Drone
+        function makeTetra(r) {
+          const s = r;
+          const v = [
+            [s, s, s],
+            [s, -s, -s],
+            [-s, s, -s],
+            [-s, -s, s],
+          ];
+          const idx = [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3];
+          const pos = [],
+            nor = [];
+          for (let i = 0; i < idx.length; i += 3) {
+            const a = v[idx[i]],
+              b = v[idx[i + 1]],
+              c = v[idx[i + 2]];
+            const ux = b[0] - a[0],
+              uy = b[1] - a[1],
+              uz = b[2] - a[2];
+            const vx = c[0] - a[0],
+              vy = c[1] - a[1],
+              vz = c[2] - a[2];
+            const nx = uy * vz - uz * vy,
+              ny = uz * vx - ux * vz,
+              nz = ux * vy - uy * vx;
+            for (const p of [a, b, c]) {
+              pos.push(p[0], p[1], p[2]);
+              nor.push(nx, ny, nz);
+            }
+          }
+          return { pos: makeBuffer(pos, 3), nor: makeBuffer(nor, 3) };
+        }
+        const drone = makeTetra(0.8);
+
+        // Roads, sidewalks, path
+        function makeStrip(x0, z0, x1, z1, w, y) {
+          const cx = (x0 + x1) / 2,
+            cz = (z0 + z1) / 2;
+          const len = Math.abs(z1 - z0);
+          const hw = w / 2;
+          const pos = [
+            cx - hw,
+            y,
+            cz - len / 2,
+            cx + hw,
+            y,
+            cz - len / 2,
+            cx + hw,
+            y,
+            cz + len / 2,
+            cx - hw,
+            y,
+            cz - len / 2,
+            cx + hw,
+            y,
+            cz + len / 2,
+            cx - hw,
+            y,
+            cz + len / 2,
+          ];
+          const nor = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+          return { pos, nor };
+        }
+        function pushStrip(bufV, bufN, x0, z0, x1, z1, w, y) {
+          const s = makeStrip(x0, z0, x1, z1, w, y);
+          bufV.push(...s.pos);
+          bufN.push(...s.nor);
+        }
+        const roadV = [],
+          roadN = [],
+          sideV = [],
+          sideN = [],
+          pathV = [],
+          pathN = [];
+        pushStrip(roadV, roadN, -0.001, -180, 0.001, 180, 6.4, 0.01);
+        pushStrip(sideV, sideN, -5.0, -180, -5.0, 180, 2.0, 0.015);
+        pushStrip(sideV, sideN, 5.0, -180, 5.0, 180, 2.0, 0.015);
+        for (let z = -180; z < 180; z += 3) {
+          const cx = Math.sin(z * 0.06) * 2.6;
+          const w = 1.6 + 0.4 * Math.sin(z * 0.15);
+          const s = makeStrip(cx, z, cx, z + 3, w, 0.02);
+          pathV.push(...s.pos);
+          pathN.push(...s.nor);
+        }
+        const roadPosBuf = makeBuffer(roadV, 3),
+          roadNorBuf = makeBuffer(roadN, 3);
+        const sidePosBuf = makeBuffer(sideV, 3),
+          sideNorBuf = makeBuffer(sideN, 3);
+        const pathPosBuf = makeBuffer(pathV, 3),
+          pathNorBuf = makeBuffer(pathN, 3);
+
+        // Street assets
+        const assetV = [],
+          assetN = [];
+        function addBench(x, z) {
+          pushCube(assetV, assetN, x, 0.25, z, 0.9, 0.1, 0.3);
+          pushCube(assetV, assetN, x, 0.45, z, 0.8, 0.08, 0.26);
+          pushCube(assetV, assetN, x - 0.7, 0.15, z, 0.06, 0.15, 0.28);
+          pushCube(assetV, assetN, x + 0.7, 0.15, z, 0.06, 0.15, 0.28);
+        }
+        function addBollard(x, z) {
+          pushCube(assetV, assetN, x, 0.35, z, 0.07, 0.35, 0.07);
+        }
+        function addSign(x, z) {
+          pushCube(assetV, assetN, x, 1.1, z, 0.05, 1.1, 0.05);
+          pushCube(assetV, assetN, x, 1.9, z, 0.6, 0.3, 0.1);
+        }
+        for (let i = -8; i <= 8; i++) {
+          addBench(-6.2, i * 18 + 6);
+          addBench(6.2, i * 18 - 6);
+          addSign(-7.2, i * 24);
+          addSign(7.2, i * 24 + 12);
+        }
+        for (let i = -20; i <= 20; i += 2) {
+          addBollard(-6.9, i * 6);
+          addBollard(6.9, i * 6 + 3);
+        }
+        const assetPosBuf = makeBuffer(assetV, 3),
+          assetNorBuf = makeBuffer(assetN, 3);
+
+        // Cars & agents
+        function makeCar() {
+          const v = [],
+            n = [];
+          pushCube(v, n, 0, 0.4, 0, 1.6, 0.4, 0.9);
+          pushCube(v, n, 0, 0.9, 0, 1.0, 0.35, 0.7);
+          return { pos: makeBuffer(v, 3), nor: makeBuffer(n, 3) };
+        }
+        const carMesh = makeCar();
+        const cars = [];
+        const lanes = [-1.6, 1.6];
+        for (let i = 0; i < 14; i++) {
+          cars.push({
+            lane: lanes[i % 2],
+            z: -140 + i * 20,
+            dir: i % 2 ? 1 : -1,
+            speed: 6 + Math.random() * 8,
+          });
+        }
+        function makeAgent() {
+          const v = [],
+            n = [];
+          pushCube(v, n, 0, 0.45, 0, 0.25, 0.45, 0.22);
+          pushCube(v, n, 0, 1.05, 0, 0.22, 0.22, 0.22);
+          return { pos: makeBuffer(v, 3), nor: makeBuffer(n, 3) };
+        }
+        const agentMesh = makeAgent();
+        const agents = [];
+        for (let i = 0; i < 10; i++) {
+          agents.push({
+            x: i < 5 ? -9.5 : 9.5,
+            z: -40 + i * 12,
+            phase: Math.random() * Math.PI * 2,
+          });
+        }
+
+        // ---------- RENDER LOOP ----------
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        const proj = () =>
+          Mat4.perspective(1.0, canvas.width / canvas.height, 0.1, 2000);
+        function sunDir(d) {
+          const az = 0.8 + d * 1.6;
+          const elv = -0.1 + d * 1.4;
+          const cx = Math.cos(az),
+            sx = Math.sin(az),
+            cy = Math.cos(elv),
+            sy = Math.sin(elv);
+          return [sx * cy, sy, cx * cy];
+        }
+
+        function render(time) {
+          const t = time * 0.001;
+          const dt = 1 / 60;
+          updateCamera(dt);
+          if (autoDay) {
+            day = Math.sin(t * 0.2) * 0.5 + 0.5;
+          }
+          const top = [0.01 + 0.15 * day, 0.02 + 0.34 * day, 0.05 + 0.6 * day];
+          gl.clearColor(top[0], top[1], top[2], 1);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          const sun = sunDir(day);
+
+          gl.useProgram(progMesh);
+          gl.uniformMatrix4fv(locM.uProj, false, new Float32Array(proj()));
+          gl.uniformMatrix4fv(
+            locM.uView,
+            false,
+            new Float32Array(Mat4.lookAt(cam.eye, cam.target, [0, 1, 0])),
+          );
+          gl.uniform1f(
+            locM.uFog,
+            0.6 * parseFloat(document.getElementById("fog").value),
+          );
+          gl.uniform1f(locM.uTime, t);
+          gl.uniform3f(locM.uSun, sun[0], sun[1], sun[2]);
+          gl.uniform1f(locM.uDay, day);
+          gl.uniform1f(locM.uLightning, lightning);
+          gl.uniform3f(locM.uAccent, ACCENT[0], ACCENT[1], ACCENT[2]);
+          gl.uniform3f(locM.uPaint, PAINT[0], PAINT[1], PAINT[2]);
+          gl.uniform1f(
+            locM.uVibrance,
+            parseFloat(document.getElementById("vibrance").value),
+          );
+          gl.uniform1i(locM.uPathRainbow, pathRainbow ? 1 : 0);
+
+          // Ground
+          gl.uniformMatrix4fv(
+            locM.uModel,
+            false,
+            new Float32Array(Mat4.ident()),
+          );
+          gl.uniform3f(locM.uColor, 0.0, 1.0, 0.0);
+          drawBuffer(
+            progMesh,
+            locM.pos,
+            locM.nor,
+            plane.pos,
+            plane.nor,
+            gl.TRIANGLES,
+          );
+
+          // Buildings
+          if (showMeshes) {
+            gl.uniform3f(locM.uColor, 0.0, 0.9, 1.0);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              buildMeshPosBuf,
+              buildMeshNorBuf,
+              gl.TRIANGLES,
+            );
+          }
+          if (showRoads) {
+            gl.uniform3f(locM.uColor, 0.22, 0.22, 0.22);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              roadPosBuf,
+              roadNorBuf,
+              gl.TRIANGLES,
+            );
+            gl.uniform3f(locM.uColor, 0.45, 0.45, 0.45);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              sidePosBuf,
+              sideNorBuf,
+              gl.TRIANGLES,
+            );
+            gl.uniform3f(locM.uColor, 0.9, 0.2, 0.6);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              pathPosBuf,
+              pathNorBuf,
+              gl.TRIANGLES,
+            );
+          }
+          if (showMeshes) {
+            gl.uniformMatrix4fv(
+              locM.uModel,
+              false,
+              new Float32Array(Mat4.ident()),
+            );
+            gl.uniform3f(locM.uColor, 0.0, 0.9, 0.8);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              storePosBuf,
+              storeNorBuf,
+              gl.TRIANGLES,
+            );
+          }
+          if (showAssets) {
+            gl.uniform3f(locM.uColor, 0.35, 0.35, 0.35);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              assetPosBuf,
+              assetNorBuf,
+              gl.TRIANGLES,
+            );
+          }
+          if (showHolo) {
+            gl.uniformMatrix4fv(
+              locM.uModel,
+              false,
+              new Float32Array(Mat4.ident()),
+            );
+            gl.uniform3f(locM.uColor, 1.0, 0.0, 1.0);
+            drawBuffer(
+              progMesh,
+              locM.pos,
+              locM.nor,
+              holoPosBuf,
+              holoNorBuf,
+              gl.TRIANGLES,
+            );
+          }
+
+          // Drone
+          const dM = Mat4.rotateY(
+            Mat4.translate(Mat4.ident(), [
+              Math.cos(t * 0.4) * 10,
+              4.5 + Math.sin(t * 1.3) * 0.5,
+              Math.sin(t * 0.4) * 10,
+            ]),
+            t * 2.0,
+          );
+          gl.uniformMatrix4fv(locM.uModel, false, new Float32Array(dM));
+          gl.uniform3f(locM.uColor, 0.2, 0.8, 1.0);
+          drawBuffer(
+            progMesh,
+            locM.pos,
+            locM.nor,
+            drone.pos,
+            drone.nor,
+            gl.TRIANGLES,
+          );
+
+          // Traffic
+          if (showTraffic) {
+            for (const c of cars) {
+              c.z += c.dir * c.speed * dt * 3.2;
+              if (c.z > 170) c.z = -170;
+              if (c.z < -170) c.z = 170;
+              let carM = Mat4.translate(Mat4.ident(), [c.lane, 0.4, c.z]);
+              carM = Mat4.rotateY(carM, c.dir > 0 ? Math.PI : 0.0);
+              drawMeshUnit(carMesh.pos, carMesh.nor, carM, [0.0, 0.9, 0.8]);
+            }
+          }
+          if (showAgents) {
+            for (let i = 0; i < agents.length; i++) {
+              const a = agents[i];
+              const ax = a.x + Math.sin(t * 0.6 + a.phase) * 0.6;
+              const az = a.z + Math.cos(t * 0.6 + a.phase) * 0.6;
+              let aM = Mat4.translate(Mat4.ident(), [
+                ax,
+                0.5 + 0.1 * Math.sin(t * 2 + i),
+                az,
+              ]);
+              aM = Mat4.rotateY(aM, t * 1.6 + i);
+              drawMeshUnit(agentMesh.pos, agentMesh.nor, aM, [0.0, 0.8, 1.0]);
+            }
+          }
+
+          // Particles
+          if (parseFloat(document.getElementById("particles").value) > 0.02) {
+            gl.useProgram(progWire);
+            gl.uniformMatrix4fv(locW.uProj, false, new Float32Array(proj()));
+            gl.uniformMatrix4fv(
+              locW.uView,
+              false,
+              new Float32Array(Mat4.lookAt(cam.eye, cam.target, [0, 1, 0])),
+            );
+            gl.uniformMatrix4fv(
+              locW.uModel,
+              false,
+              new Float32Array(Mat4.ident()),
+            );
+            gl.uniform1f(
+              locW.uFog,
+              0.6 * parseFloat(document.getElementById("fog").value),
+            );
+            drawBuffer(
+              progWire,
+              locW.pos,
+              locW.col,
+              partPosBuf,
+              partColBuf,
+              gl.POINTS,
+            );
+          }
+
+          // Wires
+          if (showWire) {
+            gl.useProgram(progWire);
+            gl.uniformMatrix4fv(locW.uProj, false, new Float32Array(proj()));
+            gl.uniformMatrix4fv(
+              locW.uView,
+              false,
+              new Float32Array(Mat4.lookAt(cam.eye, cam.target, [0, 1, 0])),
+            );
+            gl.uniform1f(
+              locW.uFog,
+              0.6 * parseFloat(document.getElementById("fog").value),
+            );
+            gl.uniformMatrix4fv(
+              locW.uModel,
+              false,
+              new Float32Array(Mat4.ident()),
+            );
+            drawBuffer(
+              progWire,
+              locW.pos,
+              locW.col,
+              gridPosBuf,
+              gridColBuf,
+              gl.LINES,
+            );
+            drawBuffer(
+              progWire,
+              locW.pos,
+              locW.col,
+              buildPosBuf,
+              buildColBuf,
+              gl.LINES,
+            );
+          }
+
+          // ---------- OUTDOOR "BEM VINDO" (central) ----------
+          updateWelcomeTexture(t);
+          gl.useProgram(progTex);
+          gl.uniformMatrix4fv(locTex.uProj, false, new Float32Array(proj()));
+          gl.uniformMatrix4fv(
+            locTex.uView,
+            false,
+            new Float32Array(Mat4.lookAt(cam.eye, cam.target, [0, 1, 0])),
+          );
+          gl.uniform1f(
+            locTex.uFog,
+            0.6 * parseFloat(document.getElementById("fog").value),
+          );
+          gl.uniform3f(locTex.uFogColor, top[0], top[1], top[2]);
+          let model = Mat4.ident();
+          model = Mat4.translate(model, welcomePos);
+          model = Mat4.rotateY(model, welcomeRotY);
+          gl.uniformMatrix4fv(locTex.uModel, false, new Float32Array(model));
+          gl.bindTexture(gl.TEXTURE_2D, welcomeTex);
+          gl.uniform1i(locTex.uTexture, 0);
+          gl.bindBuffer(gl.ARRAY_BUFFER, welcomePosBuf);
+          gl.vertexAttribPointer(locTex.pos, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(locTex.pos);
+          gl.bindBuffer(gl.ARRAY_BUFFER, welcomeUvBuf);
+          gl.vertexAttribPointer(locTex.uv, 2, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(locTex.uv);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+          // ---------- BANNERS NOS PRÉDIOS ----------
+          for (const bb of buildingOutdoors) {
+            let m = Mat4.ident();
+            m = Mat4.translate(m, bb.pos);
+            m = Mat4.rotateY(m, bb.rotY);
+            gl.uniformMatrix4fv(locTex.uModel, false, new Float32Array(m));
+            gl.bindTexture(gl.TEXTURE_2D, bb.texture);
+            gl.uniform1i(locTex.uTexture, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, bb.posBuf);
+            gl.vertexAttribPointer(locTex.pos, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(locTex.pos);
+            gl.bindBuffer(gl.ARRAY_BUFFER, bb.uvBuf);
+            gl.vertexAttribPointer(locTex.uv, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(locTex.uv);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+          }
+
+          requestAnimationFrame(render);
+        }
+
+        // Iniciar o loop
+        requestAnimationFrame(render);
+      }
+
+      // Executa a inicialização
+      init();
+    </script>
+  </body>
+</html>
