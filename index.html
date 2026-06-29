@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bem-vindo a NewTown</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>NVIDIA Neon VR City — Zero‑CDN</title>
     <style>
       :root {
         --fg: #c9fff9;
@@ -12,8 +12,6 @@
       html,
       body {
         height: 100%;
-      }
-      body {
         margin: 0;
         background: #000;
         font-family:
@@ -24,9 +22,13 @@
           sans-serif;
         color: var(--fg);
         overflow: hidden;
+        touch-action: none; /* evita rolagem/zoom da página */
       }
       canvas {
         display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
       }
 
       /* --- HUD (botões superiores esquerdos) --- */
@@ -38,6 +40,7 @@
         display: flex;
         gap: 8px;
         align-items: center;
+        flex-wrap: wrap; /* para telas pequenas */
       }
       .hud button {
         background: rgba(0, 255, 213, 0.12);
@@ -47,6 +50,7 @@
         border-radius: 12px;
         cursor: pointer;
         font-size: 14px;
+        touch-action: manipulation;
       }
       .hud button:hover {
         background: rgba(0, 255, 213, 0.25);
@@ -61,11 +65,12 @@
         background: rgba(0, 255, 213, 0.12);
         border: 1px solid rgba(0, 255, 213, 0.5);
         color: var(--fg);
-        padding: 8px 14px;
+        padding: 10px 16px; /* um pouco maior para toque */
         border-radius: 12px;
         cursor: pointer;
-        font-size: 20px;
+        font-size: 22px;
         line-height: 1;
+        touch-action: manipulation;
       }
       #menu-toggle:hover {
         background: rgba(0, 255, 213, 0.25);
@@ -113,7 +118,7 @@
       }
       .menu-item {
         display: block;
-        padding: 10px 14px;
+        padding: 12px 14px; /* mais padding para toque */
         background: rgba(0, 255, 213, 0.06);
         border: 1px solid rgba(0, 255, 213, 0.15);
         border-radius: 10px;
@@ -124,6 +129,7 @@
         transition:
           background 0.2s,
           border-color 0.2s;
+        touch-action: manipulation;
       }
       .menu-item:hover {
         background: rgba(0, 255, 213, 0.15);
@@ -179,7 +185,7 @@
       }
       .panel .btn-back {
         margin-top: 8px;
-        padding: 6px 12px;
+        padding: 10px 12px; /* maior para toque */
         background: rgba(0, 255, 213, 0.12);
         border: 1px solid rgba(0, 255, 213, 0.3);
         border-radius: 10px;
@@ -188,6 +194,7 @@
         font-size: 13px;
         text-align: center;
         transition: background 0.2s;
+        touch-action: manipulation;
       }
       .panel .btn-back:hover {
         background: rgba(0, 255, 213, 0.25);
@@ -217,6 +224,7 @@
         z-index: 10;
         font-size: 12px;
         text-align: center;
+        pointer-events: none;
       }
       .toggle {
         margin-left: 8px;
@@ -232,6 +240,27 @@
         }
         .panel input[type="range"] {
           width: 100px;
+        }
+        .hud button {
+          padding: 6px 10px;
+          font-size: 12px;
+        }
+        #menu-toggle {
+          padding: 8px 12px;
+          font-size: 20px;
+        }
+      }
+      @media (max-width: 480px) {
+        .hud {
+          gap: 4px;
+        }
+        .hud button {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
+        #menu-toggle {
+          padding: 6px 10px;
+          font-size: 18px;
         }
       }
     </style>
@@ -396,9 +425,10 @@
     </div>
 
     <!-- Badge e Help -->
-    <div class="badge">Bem-vindo a NewTown</div>
+    <div class="badge">CYBERPUNK — ZERO‑CDN / PURE WEBGL</div>
     <div class="help">
-      Banners com imagens (Calcinha Neon) surgem nas fachadas dos prédios!
+      Banners com imagens (Calcinha Neon) surgem nas fachadas dos prédios! Use
+      toque para orbitar e pinça para zoom.
     </div>
 
     <!-- ============================================================ -->
@@ -830,28 +860,92 @@
       document.addEventListener("keydown", (e) => (keys[e.code] = true));
       document.addEventListener("keyup", (e) => (keys[e.code] = false));
 
-      let dragging = false,
-        lx = 0,
-        ly = 0;
-      canvas.addEventListener("mousedown", (e) => {
-        dragging = true;
-        lx = e.clientX;
-        ly = e.clientY;
-      });
-      addEventListener("mouseup", () => (dragging = false));
-      addEventListener("mousemove", (e) => {
-        if (dragging && mode === "orbit") {
-          cam.theta -= (e.clientX - lx) * 0.005;
-          cam.phi -= (e.clientY - ly) * 0.005;
-          cam.phi = Math.max(0.05, Math.min(Math.PI - 0.05, cam.phi));
-          lx = e.clientX;
-          ly = e.clientY;
+      // ----- EVENTOS DE TOQUE E MOUSE (unificados) -----
+      let isDragging = false;
+      let lastX = 0,
+        lastY = 0;
+      let isPinching = false;
+      let lastPinchDist = 0;
+
+      // Função para obter coordenadas do toque ou mouse
+      function getPointerPos(e) {
+        if (e.touches) {
+          return { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
-      });
-      addEventListener("wheel", (e) => {
-        cam.r *= 1 + e.deltaY * 0.001;
-        cam.r = Math.max(6, Math.min(120, cam.r));
-      });
+        return { x: e.clientX, y: e.clientY };
+      }
+
+      // Distância entre dois toques (pinça)
+      function getPinchDist(e) {
+        if (e.touches && e.touches.length >= 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          return Math.hypot(dx, dy);
+        }
+        return 0;
+      }
+
+      function onPointerDown(e) {
+        e.preventDefault(); // evita seleção de texto/scroll
+        if (e.touches && e.touches.length >= 2) {
+          // Início da pinça
+          isPinching = true;
+          lastPinchDist = getPinchDist(e);
+          return;
+        }
+        isDragging = true;
+        const pos = getPointerPos(e);
+        lastX = pos.x;
+        lastY = pos.y;
+      }
+
+      function onPointerMove(e) {
+        e.preventDefault();
+        if (isPinching && e.touches && e.touches.length >= 2) {
+          // Ajuste de zoom com pinça
+          const newDist = getPinchDist(e);
+          const delta = (newDist - lastPinchDist) * 0.01;
+          cam.r = Math.max(6, Math.min(120, cam.r * (1 + delta * 0.5)));
+          lastPinchDist = newDist;
+          return;
+        }
+        if (!isDragging || mode !== "orbit") return;
+        const pos = getPointerPos(e);
+        const dx = pos.x - lastX;
+        const dy = pos.y - lastY;
+        cam.theta -= dx * 0.005;
+        cam.phi -= dy * 0.005;
+        cam.phi = Math.max(0.05, Math.min(Math.PI - 0.05, cam.phi));
+        lastX = pos.x;
+        lastY = pos.y;
+      }
+
+      function onPointerUp(e) {
+        e.preventDefault();
+        isDragging = false;
+        isPinching = false;
+      }
+
+      // Limpar eventos antigos (caso haja) e adicionar novos
+      // Removemos listeners anteriores se existirem (não há, mas garantimos)
+      // Adicionamos suporte para mouse e toque
+      canvas.addEventListener("mousedown", onPointerDown);
+      window.addEventListener("mousemove", onPointerMove);
+      window.addEventListener("mouseup", onPointerUp);
+      canvas.addEventListener("touchstart", onPointerDown, { passive: false });
+      window.addEventListener("touchmove", onPointerMove, { passive: false });
+      window.addEventListener("touchend", onPointerUp, { passive: false });
+
+      // Para compatibilidade com wheel (mouse)
+      window.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          cam.r *= 1 + e.deltaY * 0.001;
+          cam.r = Math.max(6, Math.min(120, cam.r));
+        },
+        { passive: false },
+      );
 
       function updateCamera(dt) {
         if (mode === "fps") {
@@ -1000,7 +1094,7 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
       const wWelcome = 12.0,
-        hWelcome = 3.0; // aumentei um pouco
+        hWelcome = 3.0;
       const hwW = wWelcome / 2,
         hhW = hWelcome / 2;
       const welcomePos = [0, 12, 0];
