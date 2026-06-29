@@ -2,8 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>NVIDIA Neon VR City — Zero‑CDN</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>Bem-vindo a NewTown</title>
     <style>
       :root {
         --fg: #c9fff9;
@@ -22,7 +25,7 @@
           sans-serif;
         color: var(--fg);
         overflow: hidden;
-        touch-action: none; /* evita rolagem/zoom da página */
+        touch-action: none;
       }
       canvas {
         display: block;
@@ -31,7 +34,7 @@
         touch-action: none;
       }
 
-      /* --- HUD (botões superiores esquerdos) --- */
+      /* ---botões superiores esquerdos --- */
       .hud {
         position: fixed;
         top: 12px;
@@ -40,7 +43,7 @@
         display: flex;
         gap: 8px;
         align-items: center;
-        flex-wrap: wrap; /* para telas pequenas */
+        flex-wrap: wrap;
       }
       .hud button {
         background: rgba(0, 255, 213, 0.12);
@@ -56,7 +59,7 @@
         background: rgba(0, 255, 213, 0.25);
       }
 
-      /* --- Botão do menu (toggle) - agora no canto superior direito --- */
+      /* --- menu  no canto superior direito --- */
       #menu-toggle {
         position: fixed;
         top: 12px;
@@ -65,7 +68,7 @@
         background: rgba(0, 255, 213, 0.12);
         border: 1px solid rgba(0, 255, 213, 0.5);
         color: var(--fg);
-        padding: 10px 16px; /* um pouco maior para toque */
+        padding: 10px 16px;
         border-radius: 12px;
         cursor: pointer;
         font-size: 22px;
@@ -76,10 +79,10 @@
         background: rgba(0, 255, 213, 0.25);
       }
 
-      /* --- Container lateral (menu + painel) --- */
+      /* --- menu + painel --- */
       .side-container {
         position: fixed;
-        top: 60px; /* abaixo do botão */
+        top: 60px;
         right: 12px;
         z-index: 15;
         width: 320px;
@@ -118,7 +121,7 @@
       }
       .menu-item {
         display: block;
-        padding: 12px 14px; /* mais padding para toque */
+        padding: 12px 14px;
         background: rgba(0, 255, 213, 0.06);
         border: 1px solid rgba(0, 255, 213, 0.15);
         border-radius: 10px;
@@ -140,9 +143,9 @@
         border-color: var(--accent);
       }
 
-      /* --- Painel de configurações (original) --- */
+      /* --- Painel de configurações  --- */
       .panel {
-        display: none; /* controlado por JS */
+        display: none;
         flex-direction: column;
         gap: 4px;
       }
@@ -185,7 +188,7 @@
       }
       .panel .btn-back {
         margin-top: 8px;
-        padding: 10px 12px; /* maior para toque */
+        padding: 10px 12px;
         background: rgba(0, 255, 213, 0.12);
         border: 1px solid rgba(0, 255, 213, 0.3);
         border-radius: 10px;
@@ -200,7 +203,6 @@
         background: rgba(0, 255, 213, 0.25);
       }
 
-      /* --- Outros elementos (help, badge) --- */
       .help {
         left: 12px;
         bottom: 12px;
@@ -230,7 +232,6 @@
         margin-left: 8px;
       }
 
-      /* --- Ajustes responsivos --- */
       @media (max-width: 700px) {
         .side-container {
           width: 280px;
@@ -268,17 +269,17 @@
   <body>
     <canvas id="gl"></canvas>
 
-    <!-- HUD (esquerda) -->
+    <!-- HUD esquerda -->
     <div class="hud">
       <button id="btn-orbit">Orbit</button>
       <button id="btn-fps">FPS</button>
       <button id="btn-screenshot">Shot</button>
     </div>
 
-    <!-- Botão do menu (direita) -->
+    <!-- Botão do menu direita -->
     <button id="menu-toggle" title="Abrir/Fechar menu">☰</button>
 
-    <!-- Container lateral (menu + painel) -->
+    <!-- Container lateral menu + painel -->
     <div id="side-container" class="side-container hidden">
       <!-- MENU -->
       <div id="menu" class="menu">
@@ -292,9 +293,9 @@
         >
       </div>
 
-      <!-- PAINEL DE CONFIGURAÇÕES (original) -->
+      <!-- PAINEL DE CONFIGURAÇÕES  -->
       <div id="panel" class="panel">
-        <h3>NVIDIA Neon City — Controls</h3>
+        <h3>Newtown — Controles</h3>
         <div class="row">
           <span>Neon</span
           ><input
@@ -307,7 +308,7 @@
           />
         </div>
         <div class="row">
-          <span>Particles</span
+          <span>Particulas</span
           ><input
             id="particles"
             type="range"
@@ -318,7 +319,7 @@
           />
         </div>
         <div class="row">
-          <span>Fog</span
+          <span>Névoa</span
           ><input
             id="fog"
             type="range"
@@ -329,7 +330,7 @@
           />
         </div>
         <div class="row">
-          <span>Day/Night</span
+          <span>Dia/Noite</span
           ><input
             id="day"
             type="range"
@@ -342,7 +343,7 @@
         <div class="row">
           <label
             ><input type="checkbox" id="autoDay" class="toggle" /> Auto
-            Cycle</label
+            Ciclo</label
           >
         </div>
         <div class="row">
@@ -354,49 +355,49 @@
         <div class="row">
           <label
             ><input type="checkbox" id="toggleMeshes" checked class="toggle" />
-            Solid Meshes</label
+            Malhas</label
           >
         </div>
         <div class="row">
           <label
             ><input type="checkbox" id="toggleHolo" checked class="toggle" />
-            Holograms</label
+            Hologramas</label
           >
         </div>
         <div class="row">
           <label
             ><input type="checkbox" id="toggleTraffic" checked class="toggle" />
-            Traffic</label
+            Tráfego</label
           >
         </div>
         <div class="row">
           <label
             ><input type="checkbox" id="toggleAgents" checked class="toggle" />
-            Agents</label
+            Agentes</label
           >
         </div>
         <div class="row">
           <label
             ><input type="checkbox" id="toggleLamps" checked class="toggle" />
-            Street Lamps</label
+            lâmpadas de rua</label
           >
         </div>
         <div class="row">
           <label
             ><input type="checkbox" id="toggleRoads" checked class="toggle" />
-            Roads & Paths</label
+            Estradas</label
           >
         </div>
         <div class="row">
           <label
             ><input type="checkbox" id="toggleAssets" checked class="toggle" />
-            Street Assets</label
+            Assets da rua</label
           >
         </div>
         <div class="row">
-          <span>Theme</span>
+          <span>Tema</span>
           <select id="theme">
-            <option value="nvidia" selected>NVIDIA Green</option>
+            <option value="nvidia" selected>Green</option>
             <option value="magenta">Magenta Pulse</option>
             <option value="ocean">Ocean Cyan</option>
             <option value="sunset">Sunset Neon</option>
@@ -425,11 +426,8 @@
     </div>
 
     <!-- Badge e Help -->
-    <div class="badge">CYBERPUNK — ZERO‑CDN / PURE WEBGL</div>
-    <div class="help">
-      Banners com imagens (Calcinha Neon) surgem nas fachadas dos prédios! Use
-      toque para orbitar e pinça para zoom.
-    </div>
+    <div class="badge">NewTown</div>
+    <div class="help">Desenvolvido para uma demonstração de WebGL.</div>
 
     <!-- ============================================================ -->
     <!--  JAVASCRIPT                                                  -->
@@ -648,7 +646,7 @@
         drawBuffer(progMesh, locM.pos, locM.nor, bufPos, bufNor, gl.TRIANGLES);
       }
 
-      // Grid (linhas)
+      // linhas
       const gridPos = [],
         gridCol = [];
       const G = 120,
@@ -693,7 +691,6 @@
       const plane = makePlane(200);
 
       // ---------- PRÉDIOS + BANNERS COM IMAGENS ----------
-      // Lista de banners (apenas um arquivo de imagem, mas vários nomes)
       const bannerDefs = [
         { name: "Calcinha Neon", fallback: "BANDA CALCINHA NEON" },
         { name: "Metropol", fallback: "METROPOL" },
@@ -701,7 +698,7 @@
         { name: "Club Noob", fallback: "CLUB NOOB" },
       ];
 
-      // Função para criar textura com texto (fallback)
+      // Função para criar textura com texto
       function createFallbackTexture(text, color = "#00ffd5", glow = "cyan") {
         const c = document.createElement("canvas");
         c.width = 256;
@@ -792,7 +789,7 @@
         }
       }
 
-      // ---------- UI & STATE (inicializado depois do carregamento) ----------
+      // ---------- UI & STATE ----------
       let mode = "orbit";
       const cam = {
         theta: 0.6,
@@ -860,7 +857,7 @@
       document.addEventListener("keydown", (e) => (keys[e.code] = true));
       document.addEventListener("keyup", (e) => (keys[e.code] = false));
 
-      // ----- EVENTOS DE TOQUE E MOUSE (unificados) -----
+      // ----- EVENTOS DE TOQUE E MOUSE -----
       let isDragging = false;
       let lastX = 0,
         lastY = 0;
@@ -875,7 +872,7 @@
         return { x: e.clientX, y: e.clientY };
       }
 
-      // Distância entre dois toques (pinça)
+      // dois toques - pinça
       function getPinchDist(e) {
         if (e.touches && e.touches.length >= 2) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -886,9 +883,8 @@
       }
 
       function onPointerDown(e) {
-        e.preventDefault(); // evita seleção de texto/scroll
+        e.preventDefault();
         if (e.touches && e.touches.length >= 2) {
-          // Início da pinça
           isPinching = true;
           lastPinchDist = getPinchDist(e);
           return;
@@ -902,7 +898,6 @@
       function onPointerMove(e) {
         e.preventDefault();
         if (isPinching && e.touches && e.touches.length >= 2) {
-          // Ajuste de zoom com pinça
           const newDist = getPinchDist(e);
           const delta = (newDist - lastPinchDist) * 0.01;
           cam.r = Math.max(6, Math.min(120, cam.r * (1 + delta * 0.5)));
@@ -926,9 +921,7 @@
         isPinching = false;
       }
 
-      // Limpar eventos antigos (caso haja) e adicionar novos
-      // Removemos listeners anteriores se existirem (não há, mas garantimos)
-      // Adicionamos suporte para mouse e toque
+      //  suporte para mouse e toque
       canvas.addEventListener("mousedown", onPointerDown);
       window.addEventListener("mousemove", onPointerMove);
       window.addEventListener("mouseup", onPointerUp);
@@ -936,7 +929,6 @@
       window.addEventListener("touchmove", onPointerMove, { passive: false });
       window.addEventListener("touchend", onPointerUp, { passive: false });
 
-      // Para compatibilidade com wheel (mouse)
       window.addEventListener(
         "wheel",
         (e) => {
@@ -1039,7 +1031,7 @@
           });
         });
 
-      hideSide(); // começa fechado
+      hideSide();
 
       // ---------- OUTDOOR "BEM VINDO" (central) ----------
       function createWelcomeTexture(text, width = 512, height = 128) {
@@ -1188,10 +1180,9 @@
           );
         }
 
-        // Criar uma textura para cada definição de banner (reutilizando a mesma imagem)
+        // Criar uma textura para cada definição de banner
         const bannerTextures = {};
         for (const def of bannerDefs) {
-          // se a imagem foi carregada, usamos ela, senão fallback
           const tex = createTextureFromImage(bannerImg, def.fallback);
           bannerTextures[def.name] = tex;
         }
@@ -1383,8 +1374,7 @@
         const buildMeshPosBuf = makeBuffer(meshVerts, 3),
           buildMeshNorBuf = makeBuffer(meshNorms, 3);
 
-        // ---------- DEMAIS ELEMENTOS (stores, lamps, etc.) ----------
-        // Stores
+        // ---------- DEMAIS ELEMENTOS ----------
         const storeVerts = [],
           storeNorms = [];
         function addStore(x, z) {
@@ -1399,7 +1389,7 @@
         const storePosBuf = makeBuffer(storeVerts, 3),
           storeNorBuf = makeBuffer(storeNorms, 3);
 
-        // Street lamps (wire only)
+        // Street lamps
         const lampPos = [];
         function addLamp(x, z) {
           addBoxWire(x, 3, z, 0.08, 3, 0.08);
